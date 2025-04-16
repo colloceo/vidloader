@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VidLoader - Download Videos & Audio from Any Platform</title>
+  <meta name="description" content="VidLoader - Download any video or audio from YouTube, Instagram, TikTok, and X. Free, fast, and easy.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Smooth transitions for dark mode */
+    html, body {
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    /* Custom spinner animation */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+    /* Hide spinner and messages by default */
+    #loadingSpinner, #errorMessage, #successMessage {
+      display: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+  <div class="container mx-auto px-4 py-8 max-w-2xl">
+    <!-- Dark Mode Toggle -->
+    <div class="flex justify-end mb-6">
+ 
+    </div>
+
+    <!-- Header -->
+    <h1 class="text-4xl font-bold text-center mb-4">🎥 VidLoader</h1>
+    <p class="text-center text-lg mb-6">
+      Download videos and audio from <span class="font-semibold">YouTube, TikTok, Instagram, and X</span>
+    </p>
+
+    <!-- Features Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">How to Use</h2>
+      <ul class="list-disc pl-5 space-y-2">
+        <li>Paste a valid video link from YouTube, TikTok, Instagram, or X.</li>
+        <li>Choose your desired format (Video or Audio).</li>
+        <li>Click download and wait for the file to be processed.</li>
+        <li>Save the file to your device!</li>
+      </ul>
+      <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+        <strong>Note:</strong> This tool is free. Please respect copyright laws.
+      </p>
+    </div>
+
+    <!-- Download Form -->
+    <form id="downloadForm" action="/download" method="POST" class="space-y-4">
+      <div>
+        <label for="url" class="block text-sm font-medium mb-1">Enter Video URL</label>
+        <input
+          type="text"
+          id="url"
+          name="url"
+          placeholder="https://youtube.com/watch?v=example"
+          class="w-full p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+          required
+          aria-describedby="url-error"
+        />
+        <p id="url-error" class="mt-1 text-sm text-red-500 hidden"></p>
+      </div>
+
+      <div>
+        <label for="format" class="block text-sm font-medium mb-1">Select Format</label>
+        <select
+          id="format"
+          name="format"
+          class="w-full p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+        >
+          <option value="video">📹 Video</option>
+          <option value="audio">🎧 Audio (MP3)</option>
+        </select>
+      </div>
+
+      <button
+        type="submit"
+        class="w-full p-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 transition-colors flex items-center justify-center"
+        aria-label="Download content"
+      >
+        ⬇ Download Now
+      </button>
+
+      <div class="text-center">
+        <svg
+          id="loadingSpinner"
+          class="animate-spin h-8 w-8 text-blue-600 mx-auto"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+      </div>
+
+      <p id="successMessage" class="text-center text-sm text-green-500"></p>
+      <p id="errorMessage" class="text-center text-sm text-red-500"></p>
+    </form>
+
+    <!-- Footer -->
+    <footer class="text-center mt-8">
+      <p class="mb-2">
+        ❤️ Support VidLoader:
+        <a
+          href="https://buymeacoffee.com/vidloader"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Buy Me a Coffee
+        </a>
+      </p>
+      <p class="text-sm text-gray-600 dark:text-gray-400">
+        Made with 💻 for content lovers. Mobile-friendly. Fast. Free.
+      </p>
+    </footer>
+  </div>
+
+  <script>
+
+    // Form Handling and Validation
+    const form = document.getElementById('downloadForm');
+    const urlInput = document.getElementById('url');
+    const urlError = document.getElementById('url-error');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+    const submitButton = form.querySelector('button[type="submit"]');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+
+    const validateUrl = (value) => {
+      const urlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|tiktok\.com|instagram\.com|x\.com|twitter\.com)\/.+$/i;
+      if (!value) {
+        return 'URL is required';
+      } else if (!urlPattern.test(value)) {
+        return 'Please enter a valid URL from YouTube, TikTok, Instagram, or X';
+      }
+      return '';
+    };
+
+    urlInput.addEventListener('input', () => {
+      const error = validateUrl(urlInput.value);
+      urlError.textContent = error;
+      urlError.classList.toggle('hidden', !error);
+      submitButton.disabled = !!error;
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const error = validateUrl(urlInput.value);
+      if (error) {
+        urlError.textContent = error;
+        urlError.classList.remove('hidden');
+        return;
+      }
+
+      loadingSpinner.style.display = 'block';
+      submitButton.disabled = true;
+      submitButton.textContent = 'Processing...';
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+
+      const formData = new FormData(form);
+      try {
+        const response = await fetch('/download', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok && response.headers.get('content-type')?.includes('application/octet-stream')) {
+          // Handle file download
+          const blob = await response.blob();
+          const contentDisposition = response.headers.get('content-disposition');
+          const filename = contentDisposition
+            ? contentDisposition.match(/filename="(.+)"/)?.[1] || 'download'
+            : `vidloader_${new Date().toISOString().split('T')[0]}.${formData.get('format') === 'audio' ? 'mp3' : 'mp4'}`;
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          successMessage.textContent = 'File downloaded successfully! Check your Downloads folder.';
+          successMessage.style.display = 'block';
+        } else {
+          const data = await response.json();
+          errorMessage.textContent = data.error || 'An error occurred';
+          errorMessage.style.display = 'block';
+        }
+      } catch (err) {
+        errorMessage.textContent = 'Network error: Please try again';
+        errorMessage.style.display = 'block';
+      } finally {
+        loadingSpinner.style.display = 'none';
+        submitButton.disabled = false;
+        submitButton.textContent = '⬇ Download Now';
+      }
+    });
+  </script>
+</body>
+</html>
