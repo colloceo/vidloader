@@ -7,18 +7,15 @@
   <meta name="description" content="VidLoader - Download any video or audio from YouTube, Instagram, TikTok, and X. Free, fast, and easy.">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Smooth transitions for dark mode */
     html, body {
       transition: background-color 0.3s ease, color 0.3s ease;
     }
-    /* Custom spinner animation */
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
     .animate-spin {
       animation: spin 1s linear infinite;
     }
-    /* Hide spinner and messages by default */
     #loadingSpinner, #errorMessage, #successMessage {
       display: none;
     }
@@ -26,32 +23,28 @@
 </head>
 <body class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
   <div class="container mx-auto px-4 py-8 max-w-2xl">
-    <!-- Dark Mode Toggle -->
     <div class="flex justify-end mb-6">
- 
+
     </div>
 
-    <!-- Header -->
     <h1 class="text-4xl font-bold text-center mb-4">🎥 VidLoader</h1>
     <p class="text-center text-lg mb-6">
       Download videos and audio from <span class="font-semibold">YouTube, TikTok, Instagram, and X</span>
     </p>
 
-    <!-- Features Section -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
       <h2 class="text-xl font-semibold mb-4">How to Use</h2>
       <ul class="list-disc pl-5 space-y-2">
         <li>Paste a valid video link from YouTube, TikTok, Instagram, or X.</li>
         <li>Choose your desired format (Video or Audio).</li>
         <li>Click download and wait for the file to be processed.</li>
-        <li>Save the file to your device!</li>
+        <li>Save the file to your device! (Audio may download as WebM if MP3 conversion fails.)</li>
       </ul>
       <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
-        <strong>Note:</strong> This tool is free. Please respect copyright laws.
+        <strong>Note:</strong> This tool is free. Please respect copyright laws. For Instagram, use public URLs to avoid login issues.
       </p>
     </div>
 
-    <!-- Download Form -->
     <form id="downloadForm" action="/download" method="POST" class="space-y-4">
       <div>
         <label for="url" class="block text-sm font-medium mb-1">Enter Video URL</label>
@@ -75,7 +68,7 @@
           class="w-full p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
         >
           <option value="video">📹 Video</option>
-          <option value="audio">🎧 Audio (MP3)</option>
+          <option value="audio">🎧 Audio (MP3 or WebM)</option>
         </select>
       </div>
 
@@ -107,7 +100,6 @@
       <p id="errorMessage" class="text-center text-sm text-red-500"></p>
     </form>
 
-    <!-- Footer -->
     <footer class="text-center mt-8">
       <p class="mb-2">
         ❤️ Support VidLoader:
@@ -127,9 +119,8 @@
   </div>
 
   <script>
-
-    // Form Handling and Validation
-    const form = document.getElementById('downloadForm');
+    
+   const form = document.getElementById('downloadForm');
     const urlInput = document.getElementById('url');
     const urlError = document.getElementById('url-error');
     const successMessage = document.getElementById('successMessage');
@@ -174,32 +165,44 @@
         const response = await fetch('/download', {
           method: 'POST',
           body: formData,
+          headers: {
+            'Accept': 'application/octet-stream,application/json',
+          },
         });
 
-        if (response.ok && response.headers.get('content-type')?.includes('application/octet-stream')) {
-          // Handle file download
-          const blob = await response.blob();
-          const contentDisposition = response.headers.get('content-disposition');
-          const filename = contentDisposition
-            ? contentDisposition.match(/filename="(.+)"/)?.[1] || 'download'
-            : `vidloader_${new Date().toISOString().split('T')[0]}.${formData.get('format') === 'audio' ? 'mp3' : 'mp4'}`;
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          window.URL.revokeObjectURL(url);
-          successMessage.textContent = 'File downloaded successfully! Check your Downloads folder.';
-          successMessage.style.display = 'block';
+        if (response.ok) {
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/octet-stream') || contentType.includes('audio/') || contentType.includes('video/')) {
+            const blob = await response.blob();
+            const contentDisposition = response.headers.get('content-disposition');
+            const filename = contentDisposition
+              ? contentDisposition.match(/filename="(.+)"/)?.[1] || 'download'
+              : `vidloader_${new Date().toISOString().split('T')[0]}.${formData.get('format') === 'audio' ? 'mp3' : 'mp4'}`;
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              a.remove();
+              window.URL.revokeObjectURL(url);
+            }, 100);
+            successMessage.textContent = `File downloaded successfully! Check your Downloads folder. ${filename.endsWith('.webm') ? 'Note: Audio is in WebM format due to processing issues.' : ''}`;
+            successMessage.style.display = 'block';
+          } else {
+            const data = await response.json();
+            errorMessage.textContent = data.error || 'An error occurred';
+            errorMessage.style.display = 'block';
+          }
         } else {
           const data = await response.json();
-          errorMessage.textContent = data.error || 'An error occurred';
+          errorMessage.textContent = data.error || `Server error: ${response.status}`;
           errorMessage.style.display = 'block';
         }
       } catch (err) {
-        errorMessage.textContent = 'Network error: Please try again';
+        console.error('Fetch error:', err);
+        errorMessage.textContent = 'Failed to download. Check your network or try again later. The file may still have downloaded; check your Downloads folder.';
         errorMessage.style.display = 'block';
       } finally {
         loadingSpinner.style.display = 'none';

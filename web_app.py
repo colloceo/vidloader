@@ -4,16 +4,22 @@ import os
 import uuid
 from werkzeug.utils import secure_filename
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import logging
+from threading import Lock
 
 app = Flask(__name__)
 DOWNLOAD_FOLDER = 'downloads'
+download_lock = Lock()
 
-# Ensure downloads folder exists
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
 @app.route('/')
 def home():
+    logger.debug("Serving home page")
     return render_template('index.html')
 
 @app.route('/download', methods=['POST'])
@@ -22,9 +28,11 @@ def download():
     format_type = request.form.get('format', 'video')
 
     if not url:
+        logger.error("No URL provided")
         return jsonify({'error': 'URL is required'}), 400
 
-    # Generate unique filename
+    logger.debug(f"Processing download for URL: {url}, Format: {format_type}")
+
     filename_base = str(uuid.uuid4())
     extension = 'mp3' if format_type == 'audio' else 'mp4'
     filename = f"{filename_base}.{extension}"
@@ -33,8 +41,9 @@ def download():
     ydl_opts = {
         'outtmpl': output_path,
         'noplaylist': True,
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,
+        'no_warnings': False,
+        'logger': logger,
     }
 
     if format_type == 'audio':
@@ -45,61 +54,116 @@ def download():
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
+            'postprocessor_args': ['-loglevel', 'error', '-threads', '1', '-preset', 'ultrafast'],  # Optimize FFmpeg
         })
     else:
-        ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+        ydl_opts['format'] = 'best[ext=mp4]/best'
 
     def download_with_ydl():
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+        except Exception as e:
+            logger.error(f"yt_dlp download failed: {str(e)}")
+            raise
 
     try:
-        # Run download in a thread with a timeout
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(download_with_ydl)
-            future.result(timeout=60)  # 60-second timeout
+        logger.debug("Starting download process")
+        with download_lock:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(download_with_ydl)
+                timeout = 600 if format_type == 'audio' and 'instagram.com' in url.lower() else 300
+                future.result(timeout=timeout)
 
-        # Find the downloaded file
+        logger.debug("Download completed, checking for file")
         for file in os.listdir(DOWNLOAD_FOLDER):
             if file.startswith(filename_base):
                 file_path = os.path.join(DOWNLOAD_FOLDER, file)
-                # Set explicit filename for download
-                safe_filename = secure_filename(file) if format_type == 'audio' else f"video_{filename_base}.mp4"
+                safe_filename = f"audio_{filename_base}.mp3" if format_type == 'audio' else f"video_{filename_base}.mp4"
+                logger.debug(f"Sending file: {safe_filename}")
                 response = make_response(send_file(
                     file_path,
                     as_attachment=True,
                     download_name=safe_filename
                 ))
                 response.headers['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
-                # Clean up after sending
                 @response.call_on_close
                 def cleanup():
                     try:
+                        logger.debug(f"Cleaning up file: {file_path}")
                         os.remove(file_path)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.error(f"Cleanup failed: {str(e)}")
                 return response
 
+        logger.error("File not found after download")
         return jsonify({'error': 'File not found after download'}), 500
 
     except yt_dlp.utils.DownloadError as e:
-        return jsonify({'error': 'Failed to download: Invalid or unsupported URL'}), 400
+        error_msg = str(e).lower()
+        logger.error(f"DownloadError: {error_msg}")
+        if 'ffmpeg' in error_msg or 'ffprobe' in error_msg:
+            if format_type == 'audio':
+                logger.debug("Falling back to raw audio download")
+                ydl_opts.update({
+                    'format': 'bestaudio/best',
+                    'postprocessors': [],
+                })
+                filename = f"{filename_base}.webm"
+                output_path = os.path.join(DOWNLOAD_FOLDER, filename)
+                try:
+                    with download_lock:
+                        with ThreadPoolExecutor(max_workers=1) as executor:
+                            future = executor.submit(download_with_ydl)
+                            future.result(timeout=180)
+                    for file in os.listdir(DOWNLOAD_FOLDER):
+                        if file.startswith(filename_base):
+                            file_path = os.path.join(DOWNLOAD_FOLDER, file)
+                            safe_filename = f"audio_{filename_base}.webm"
+                            response = make_response(send_file(
+                                file_path,
+                                as_attachment=True,
+                                download_name=safe_filename
+                            ))
+                            response.headers['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
+                            @response.call_on_close
+                            def cleanup():
+                                try:
+                                    os.remove(file_path)
+                                except Exception as e:
+                                    logger.error(f"Cleanup failed: {str(e)}")
+                            return response
+                    return jsonify({'error': 'Fallback file not found'}), 500
+                except Exception as fallback_e:
+                    logger.error(f"Fallback download failed: {str(fallback_e)}")
+                    return jsonify({'error': 'Audio download failed. Try video format or ensure FFmpeg is installed.'}), 400
+            return jsonify({'error': 'FFmpeg error: Please ensure FFmpeg is installed and accessible.'}), 400
+        elif 'sign in' in error_msg or 'login' in error_msg:
+            return jsonify({'error': 'This content requires login. Please use a publicly accessible URL.'}), 403
+        elif 'geo-restricted' in error_msg:
+            return jsonify({'error': 'This content is geo-restricted and cannot be downloaded.'}), 403
+        elif 'not available' in error_msg or 'unavailable' in error_msg:
+            return jsonify({'error': 'The video is not available or private.'}), 404
+        return jsonify({'error': f'Failed to download: {str(e)}'}), 400
     except TimeoutError:
-        return jsonify({'error': 'Download timed out. Please try a shorter video or check the URL.'}), 504
+        logger.error(f"Download timed out after {timeout} seconds")
+        return jsonify({'error': 'Download timed out. Try a shorter video, check your network, or select video format.'}), 504
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500
 
 @app.route('/cleanup', methods=['POST'])
 def cleanup_downloads():
-    """Clean up all files in the downloads folder."""
     try:
         for file in os.listdir(DOWNLOAD_FOLDER):
             file_path = os.path.join(DOWNLOAD_FOLDER, file)
             if os.path.isfile(file_path):
                 os.remove(file_path)
+        logger.debug("Downloads folder cleaned up")
         return jsonify({'message': 'Downloads folder cleaned up'}), 200
     except Exception as e:
+        logger.error(f"Cleanup failed: {str(e)}")
         return jsonify({'error': f'Cleanup failed: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
