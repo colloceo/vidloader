@@ -1,37 +1,51 @@
-from flask import Flask, render_template, request, send_file, jsonify, make_response
+from flask import Flask, request, send_file, Response, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import yt_dlp
-import os
 import uuid
-from werkzeug.utils import secure_filename
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import os
 import logging
-from threading import Lock
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import threading
+import shutil
 
 app = Flask(__name__)
-DOWNLOAD_FOLDER = 'downloads'
-download_lock = Lock()
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('access.log')
+    ]
+)
 logger = logging.getLogger(__name__)
 
+# Rate limiting
+limiter = Limiter(app, key_func=get_remote_address, default_limits=["10 per minute"])
+
+# Download folder
+DOWNLOAD_FOLDER = os.path.join(os.getcwd(), 'downloads')
 if not os.path.exists(DOWNLOAD_FOLDER):
     os.makedirs(DOWNLOAD_FOLDER)
 
+# Thread lock for concurrent downloads
+download_lock = threading.Lock()
+
 @app.route('/')
-def home():
-    logger.debug("Serving home page")
-    return render_template('index.html')
+def index():
+    return app.send_static_file('index.html')
 
 @app.route('/download', methods=['POST'])
+@limiter.limit("5 per minute")
 def download():
     url = request.form.get('url')
-    format_type = request.form.get('format', 'video')
-
-    if not url:
-        logger.error("No URL provided")
-        return jsonify({'error': 'URL is required'}), 400
-
-    logger.debug(f"Processing download for URL: {url}, Format: {format_type}")
+    format_type = request.form.get('format')
+    
+    if not url or not format_type:
+        logger.error("Missing URL or format")
+        return jsonify({'error': 'Missing URL or format'}), 400
 
     filename_base = str(uuid.uuid4())
     extension = 'mp3' if format_type == 'audio' else 'mp4'
@@ -44,6 +58,7 @@ def download():
         'quiet': False,
         'no_warnings': False,
         'logger': logger,
+        'ffmpeg_location': os.getenv('FFMPEG_PATH', './ffmpeg/ffmpeg'),
     }
 
     if format_type == 'audio':
@@ -54,7 +69,7 @@ def download():
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
-            'postprocessor_args': ['-loglevel', 'error', '-threads', '1', '-preset', 'ultrafast'],  # Optimize FFmpeg
+            'postprocessor_args': ['-loglevel', 'error', '-threads', '1', '-preset', 'ultrafast'],
         })
     else:
         ydl_opts['format'] = 'best[ext=mp4]/best'
@@ -68,32 +83,33 @@ def download():
             raise
 
     try:
-        logger.debug("Starting download process")
         with download_lock:
             with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(download_with_ydl)
                 timeout = 600 if format_type == 'audio' and 'instagram.com' in url.lower() else 300
+                future = executor.submit(download_with_ydl)
                 future.result(timeout=timeout)
 
-        logger.debug("Download completed, checking for file")
         for file in os.listdir(DOWNLOAD_FOLDER):
             if file.startswith(filename_base):
+                final_filename = f"{'audio' if format_type == 'audio' else 'video'}_{filename_base}.{extension}"
                 file_path = os.path.join(DOWNLOAD_FOLDER, file)
-                safe_filename = f"audio_{filename_base}.mp3" if format_type == 'audio' else f"video_{filename_base}.mp4"
-                logger.debug(f"Sending file: {safe_filename}")
-                response = make_response(send_file(
-                    file_path,
-                    as_attachment=True,
-                    download_name=safe_filename
-                ))
-                response.headers['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
-                @response.call_on_close
+                logger.debug(f"Sending file: {file_path}")
+
                 def cleanup():
                     try:
-                        logger.debug(f"Cleaning up file: {file_path}")
-                        os.remove(file_path)
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                            logger.debug(f"Deleted file: {file_path}")
                     except Exception as e:
-                        logger.error(f"Cleanup failed: {str(e)}")
+                        logger.error(f"Error deleting file {file_path}: {str(e)}")
+
+                response = send_file(
+                    file_path,
+                    as_attachment=True,
+                    download_name=final_filename,
+                    mimetype='audio/mpeg' if format_type == 'audio' else 'video/mp4'
+                )
+                response.call_on_close(cleanup)
                 return response
 
         logger.error("File not found after download")
@@ -103,67 +119,63 @@ def download():
         error_msg = str(e).lower()
         logger.error(f"DownloadError: {error_msg}")
         if 'ffmpeg' in error_msg or 'ffprobe' in error_msg:
-            if format_type == 'audio':
-                logger.debug("Falling back to raw audio download")
-                ydl_opts.update({
-                    'format': 'bestaudio/best',
-                    'postprocessors': [],
-                })
-                filename = f"{filename_base}.webm"
-                output_path = os.path.join(DOWNLOAD_FOLDER, filename)
-                try:
-                    with download_lock:
-                        with ThreadPoolExecutor(max_workers=1) as executor:
-                            future = executor.submit(download_with_ydl)
-                            future.result(timeout=180)
-                    for file in os.listdir(DOWNLOAD_FOLDER):
-                        if file.startswith(filename_base):
-                            file_path = os.path.join(DOWNLOAD_FOLDER, file)
-                            safe_filename = f"audio_{filename_base}.webm"
-                            response = make_response(send_file(
-                                file_path,
-                                as_attachment=True,
-                                download_name=safe_filename
-                            ))
-                            response.headers['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
-                            @response.call_on_close
-                            def cleanup():
-                                try:
+            logger.debug("Falling back to raw audio download")
+            ydl_opts.update({
+                'format': 'bestaudio/best',
+                'postprocessors': [],
+                'ffmpeg_location': os.getenv('FFMPEG_PATH', './ffmpeg/ffmpeg'),
+            })
+            filename = f"{filename_base}.webm"
+            output_path = os.path.join(DOWNLOAD_FOLDER, filename)
+            try:
+                with download_lock:
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(download_with_ydl)
+                        future.result(timeout=180)
+
+                for file in os.listdir(DOWNLOAD_FOLDER):
+                    if file.startswith(filename_base):
+                        final_filename = f"audio_{filename_base}.webm"
+                        file_path = os.path.join(DOWNLOAD_FOLDER, file)
+                        logger.debug(f"Sending fallback file: {file_path}")
+
+                        def cleanup():
+                            try:
+                                if os.path.exists(file_path):
                                     os.remove(file_path)
-                                except Exception as e:
-                                    logger.error(f"Cleanup failed: {str(e)}")
-                            return response
-                    return jsonify({'error': 'Fallback file not found'}), 500
-                except Exception as fallback_e:
-                    logger.error(f"Fallback download failed: {str(fallback_e)}")
-                    return jsonify({'error': 'Audio download failed. Try video format or ensure FFmpeg is installed.'}), 400
-            return jsonify({'error': 'FFmpeg error: Please ensure FFmpeg is installed and accessible.'}), 400
+                                    logger.debug(f"Deleted file: {file_path}")
+                            except Exception as e:
+                                logger.error(f"Error deleting file {file_path}: {str(e)}")
+
+                        response = send_file(
+                            file_path,
+                            as_attachment=True,
+                            download_name=final_filename,
+                            mimetype='audio/webm'
+                        )
+                        response.call_on_close(cleanup)
+                        return response
+
+                logger.error("Fallback file not found")
+                return jsonify({'error': 'Fallback file not found'}), 500
+            except Exception as fallback_e:
+                logger.error(f"Fallback download failed: {str(fallback_e)}")
+                return jsonify({'error': 'Audio download failed. Try video format.'}), 500
         elif 'sign in' in error_msg or 'login' in error_msg:
             return jsonify({'error': 'This content requires login. Please use a publicly accessible URL.'}), 403
         elif 'geo-restricted' in error_msg:
             return jsonify({'error': 'This content is geo-restricted and cannot be downloaded.'}), 403
         elif 'not available' in error_msg or 'unavailable' in error_msg:
             return jsonify({'error': 'The video is not available or private.'}), 404
-        return jsonify({'error': f'Failed to download: {str(e)}'}), 400
+        else:
+            return jsonify({'error': f'Failed to download: {str(e)}'}), 500
     except TimeoutError:
         logger.error(f"Download timed out after {timeout} seconds")
-        return jsonify({'error': 'Download timed out. Try a shorter video, check your network, or select video format.'}), 504
+        return jsonify({'error': 'Download timed out. Try a shorter video or select video format.'}), 504
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
-
-@app.route('/cleanup', methods=['POST'])
-def cleanup_downloads():
-    try:
-        for file in os.listdir(DOWNLOAD_FOLDER):
-            file_path = os.path.join(DOWNLOAD_FOLDER, file)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-        logger.debug("Downloads folder cleaned up")
-        return jsonify({'message': 'Downloads folder cleaned up'}), 200
-    except Exception as e:
-        logger.error(f"Cleanup failed: {str(e)}")
-        return jsonify({'error': f'Cleanup failed: {str(e)}'}), 500
+        return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
