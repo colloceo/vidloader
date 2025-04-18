@@ -28,18 +28,14 @@
 VidLoader/
 ├── web/
 │   ├── templates/
-│   │   └── index.html
-│   ├── web_app.py
-│   └── requirements.txt
-├── desktop/
-│   ├── gui_app.py
-│   └── requirements.txt
-├── ffmpeg/
-│   ├── ffmpeg.exe
-│   └── ffprobe.exe
-├── screenshots/
-├── README.md
-└── LICENSE
+│      └── index.html
+├── web_app.py # for flasck backend
+│   
+├── gui_app.py # for descktop app
+│  
+├── downloads/
+├
+└── requirements.txt
 ```
 
 ---
@@ -201,7 +197,7 @@ We welcome all contributions!
 
 ```bash
 # Fork and clone
-git clone https://github.com/yourusername/VidLoader.git
+git clone https://github.com/colloceo/vidloader.git
 
 # Create feature branch
 git checkout -b feature/YourFeature
@@ -230,8 +226,8 @@ VidLoader is licensed under **GNU GPL v3.0** due to dependencies:
 
 ## ☕ Support & Contact
 
-- [GitHub Issues](https://github.com/colloceo/VidLoader/issues): Bug reports & feature requests
-- [GitHub Discussions](https://github.com/colloceo/VidLoader/discussions): Community & help
+- [GitHub Issues](https://github.com/colloceo/vidloader/issues): Bug reports & feature requests
+- [GitHub Discussions](https://github.com/colloceo/vilLoader/discussions): Community & help
 - [Buy Me a Coffee](https://www.buymeacoffee.com/colloceo): Donate to support development
 
 ---
