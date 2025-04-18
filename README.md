@@ -1,32 +1,30 @@
-VidLoader
-VidLoader is a free, open-source tool to download videos and audio from platforms like YouTube, Instagram, TikTok, and X. It offers two interfaces:
+# 🎥 VidLoader
 
-Web App: A Flask-based web application for browser-based downloads.
-Desktop App: A PyQt5-based desktop application for Windows, macOS, and Linux.
+**VidLoader** is a free, open-source tool to download videos and audio from major platforms like **YouTube**, **Instagram**, **TikTok**, and **X (Twitter)**. It’s designed to be user-friendly, fast, and cross-platform with two powerful interfaces:
 
-Built with yt_dlp and FFmpeg, VidLoader supports MP4 video and MP3 audio downloads, with a WebM fallback for audio if FFmpeg conversion fails. The project is designed for ease of use, reliability, and cross-platform compatibility.
-Features
+- 🌐 **Web App**: Flask-based web interface (with mobile and dark mode support).
+- 🖥️ **Desktop App**: PyQt5 GUI for Windows, macOS, and Linux.
 
-Download videos (MP4) and audio (MP3 or WebM) from YouTube, Instagram, TikTok, and X.
-User-friendly web interface with dark mode and mobile support.
-Desktop app with a simple GUI for offline use.
-Optimized FFmpeg for fast audio conversion (-preset ultrafast).
-WebM fallback for audio downloads if FFmpeg is unavailable.
-Detailed error handling for login issues, geo-restrictions, and timeouts.
-Logging for debugging (vidloader.log).
-Saves files to the user’s Downloads folder (e.g., C:\Users\<User>\Downloads or /sdcard/Download).
+---
 
-Screenshots
-Web App Interface
-Desktop App Interface
-Installation
-Prerequisites
+## 🚀 Features
 
-Python 3.8+: Required for both apps.
-FFmpeg: Needed for audio (MP3) conversion. Download from gyan.dev (Windows) or install via package manager (e.g., sudo apt-get install ffmpeg on Linux).
-Git: For cloning the repository.
+- 🔻 Download **videos (MP4)** and **audio (MP3/WebM)**.
+- 🌓 **Dark mode** and 📱 **mobile-responsive web UI**.
+- 🖥️ Simple and sleek **desktop GUI** (offline use).
+- ⚡ Fast audio conversion using **FFmpeg (`-preset ultrafast`)**.
+- 🔁 WebM fallback if FFmpeg is unavailable.
+- 🧠 Intelligent error handling for login issues, geo-restrictions, and timeouts.
+- 📁 Files saved automatically to the user’s **Downloads** folder:
+  - Windows: `C:\Users\<User>\Downloads`
+  - Android: `/sdcard/Download`
+- 📝 Logs all activities to `vidloader.log` for easy debugging.
 
-Project Structure
+---
+
+## 📁 Project Structure
+
+```
 VidLoader/
 ├── web/
 │   ├── templates/
@@ -42,153 +40,211 @@ VidLoader/
 ├── screenshots/
 ├── README.md
 └── LICENSE
+```
 
-Web App Setup
+---
 
-Clone the Repository:git clone https://github.com/colloceo/VidLoader.git
+## 🔧 Installation
+
+### ✅ Prerequisites
+
+- Python 3.8+
+- FFmpeg (for audio conversion):
+  - **Windows**: [Download from gyan.dev](https://www.gyan.dev/ffmpeg/builds/)
+  - **Linux**: `sudo apt-get install ffmpeg`
+  - **macOS**: `brew install ffmpeg`
+- Git
+
+---
+
+## 🌐 Web App Setup
+
+```bash
+# Clone the repo
+git clone https://github.com/colloceo/VidLoader.git
 cd VidLoader/web
 
-
-Set Up Virtual Environment:python3 -m venv venv
+# Virtual environment
+python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
+# Install dependencies
+pip install -r requirements.txt
+```
 
-Install Dependencies:pip install -r requirements.txt
-
-requirements.txt:flask==3.0.3
+**`requirements.txt`:**
+```
+flask==3.0.3
 yt-dlp==2024.8.6
 gunicorn==22.0.0
 requests==2.31.0
+```
 
+**Install FFmpeg:**
+- Place `ffmpeg.exe` and `ffprobe.exe` in `VidLoader/ffmpeg/` (Windows only)
 
-Install FFmpeg:
-Windows: Place ffmpeg.exe and ffprobe.exe in VidLoader/ffmpeg/.
-Linux/macOS: Install via sudo apt-get install ffmpeg or brew install ffmpeg.
+**Run Locally:**
+```bash
+python web_app.py
+```
 
+**Open in browser:**
+[http://127.0.0.1:5000](http://127.0.0.1:5000)
 
-Run Locally:python web_app.py
+---
 
+## 🖥️ Desktop App Setup
 
-Open http://127.0.0.1:5000 in a browser.
+```bash
+cd VidLoader/desktop
 
-
-
-Desktop App Setup
-
-Navigate to Desktop Folder:cd VidLoader/desktop
-
-
-Set Up Virtual Environment:python3 -m venv venv
+# Virtual environment
+python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
+# Install dependencies
+pip install -r requirements.txt
+```
 
-Install Dependencies:pip install -r requirements.txt
-
-requirements.txt:PyQt5==5.15.9
+**`requirements.txt`:**
+```
+PyQt5==5.15.9
 yt-dlp==2024.8.6
 requests==2.31.0
+```
 
+**Run the App:**
+```bash
+python gui_app.py
+```
 
-Install FFmpeg:
-Same as for the web app.
+---
 
+## 📦 Build Windows Executable
 
-Run the App:python gui_app.py
+```bash
+pip install pyinstaller==5.13.0
+cd desktop
 
+pyinstaller --add-binary "../ffmpeg/ffmpeg.exe;ffmpeg" \
+            --add-binary "../ffmpeg/ffprobe.exe;ffmpeg" \
+            --add-data "vidloader.log;." \
+            -F -n VidLoader gui_app.py
+```
 
-A PyQt5 window will appear for downloading.
+- Find `VidLoader.exe` in the `dist/` folder.
 
+---
 
+## ✅ Usage
 
-Standalone Executable (Windows)
+### 🌐 Web App
 
-Install PyInstaller:pip install pyinstaller==5.13.0
+1. Visit `http://127.0.0.1:5000`
+2. Paste a public video/audio URL
+3. Select **Video** or **Audio**
+4. Click **Download Now**
+5. File will save in your Downloads folder
 
+### 🖥️ Desktop App
 
-Build Executable:cd desktop
-pyinstaller --add-binary "../ffmpeg/ffmpeg.exe;ffmpeg" --add-binary "../ffmpeg/ffprobe.exe;ffmpeg" --add-data "vidloader.log;." -F -n VidLoader gui_app.py
+1. Run `gui_app.py` or `VidLoader.exe`
+2. Paste the URL
+3. Choose MP4 or MP3/WebM
+4. Click **Download**
+5. Watch the status and confirm file saved
 
+---
 
-Run:
-Find VidLoader.exe in dist/.
-Double-click to launch.
+## ⚠️ Notes & Tips
 
+- Always use **public URLs** to avoid login errors
+- Use clean Instagram URLs (e.g., `https://www.instagram.com/reel/xyz/`)
+- If MP3 fails, WebM is used as a fallback (no FFmpeg needed)
+- Shorter videos = faster processing
 
+---
 
-Usage
-Web App
+## 🚀 Deployment
 
-Open the app in a browser (http://127.0.0.1:5000 locally).
-Enter a public URL (e.g., https://youtu.be/wpJX49k9Wqk).
-Select “Video” or “Audio”.
-Click “Download Now”.
-Check your Downloads folder for video_<uuid>.mp4, audio_<uuid>.mp3, or audio_<uuid>.webm.
+### 🌐 Web App Hosting
 
-Desktop App
+- Platforms: PythonAnywhere, Heroku, Render
+- Make sure FFmpeg is installed on your server
+- Use a WSGI server like **Gunicorn**:
+  ```bash
+  gunicorn web_app:app
+  ```
 
-Launch the app (gui_app.py or VidLoader.exe).
-Enter a public URL.
-Choose “Video (MP4)” or “Audio (MP3 or WebM)”.
-Click “Download”.
-View the status label and pop-up for success or errors.
-Files save to your Downloads folder.
+### 🖥️ Desktop App Distribution
 
-Notes:
+- Upload `.exe` to GitHub or your website
+- Bundle FFmpeg in the `dist/` folder
+- Ensure GPL license compliance
 
-Use public URLs to avoid login errors.
-Instagram URLs should be clean (e.g., https://www.instagram.com/reel/DIgNemUo2TQ/).
-Audio downloads may fall back to WebM if FFmpeg fails.
+---
 
-Production Deployment
-Web App
+## 🛠️ Troubleshooting
 
-Deploy on platforms like PythonAnywhere, Heroku, or Render.
-Install FFmpeg on the server (e.g., apt-get install ffmpeg on Linux).
-Use a WSGI server like Gunicorn.
-Example for PythonAnywhere (see deployment guide in the repository).
+| Problem           | Fix |
+|-------------------|-----|
+| FFmpeg not working | Ensure ffmpeg/ffprobe are in place |
+| Login errors | Use public links only |
+| Timeouts | Shorten video length |
+| Logs not showing | Check `vidloader.log` in app folder |
 
-Desktop App
+---
 
-Distribute VidLoader.exe via GitHub Releases or a website.
-Bundle FFmpeg binaries in the executable.
-Comply with GPL licensing for FFmpeg and PyQt5.
+## 🤝 Contributing
 
-Troubleshooting
+We welcome all contributions!
 
-FFmpeg Errors: Ensure FFmpeg is installed and accessible. Check vidloader.log for details.
-Timeouts: Try shorter videos or select video format (faster than audio).
-Login Errors: Use public URLs or check platform restrictions.
-Logs: Find vidloader.log in the app directory or executable folder.
+```bash
+# Fork and clone
+git clone https://github.com/yourusername/VidLoader.git
 
-Contributing
-Contributions are welcome! Please:
+# Create feature branch
+git checkout -b feature/YourFeature
 
-Fork the repository.
-Create a feature branch (git checkout -b feature/YourFeature).
-Commit changes (git commit -m "Add YourFeature").
-Push to the branch (git push origin feature/YourFeature).
-Open a pull request.
+# Make changes and commit
+git commit -m "Add YourFeature"
 
-License
-VidLoader is open-source under the GNU General Public License v3.0 due to FFmpeg and PyQt5 dependencies. Key components:
+# Push and open a PR
+git push origin feature/YourFeature
+```
 
-FFmpeg: GPL
-PyQt5: GPL
-yt_dlp: Unlicense
-Flask: BSD
+---
 
-See LICENSE for details. If distributing, include source code or obtain commercial licenses for FFmpeg/PyQt5.
-Support
+## 📝 License
 
-Issues: Report bugs or feature requests on the Issues page.
-Contact: Reach out via GitHub Discussions.
-Donate: Support development at Buy Me a Coffee.
+VidLoader is licensed under **GNU GPL v3.0** due to dependencies:
 
-Acknowledgments
+- FFmpeg: GPL
+- PyQt5: GPL
+- yt-dlp: Unlicense
+- Flask: BSD
 
-yt_dlp for downloading functionality.
-FFmpeg for audio conversion.
-Flask and PyQt5 for the interfaces.
+📄 See `LICENSE` for full details. Distributors must include source code or acquire commercial licenses.
 
+---
 
-VidLoader: Download videos and audio with ease. Built for content lovers, by content lovers.
+## ☕ Support & Contact
+
+- [GitHub Issues](https://github.com/colloceo/VidLoader/issues): Bug reports & feature requests
+- [GitHub Discussions](https://github.com/colloceo/VidLoader/discussions): Community & help
+- [Buy Me a Coffee](https://www.buymeacoffee.com/colloceo): Donate to support development
+
+---
+
+## 🙏 Acknowledgments
+
+- 🧠 `yt_dlp` – Download backend
+- 🎧 `FFmpeg` – Audio conversion
+- 🌐 `Flask` – Web interface
+- 🖥️ `PyQt5` – Desktop GUI
+
+---
+
+> **VidLoader**: *Download videos and audio with ease. Built for content lovers, by content lovers.* 🎬
+
+---
