@@ -28,14 +28,23 @@
 VidLoader/
 ├── web/
 │   ├── templates/
-│      └── index.html
-├── web_app.py # for flasck backend
-│   
-├── gui_app.py # for descktop app
-│  
-├── downloads/
-├
-└── requirements.txt
+│   │   └── index.html          # HTML template for the web interface
+│   └── web_app.py              # Flask backend for the web app
+│
+├── gui_app.py                  # PyQt5 desktop application
+│
+├── downloads/                 # Folder where downloaded files are saved
+│
+├── ffmpeg/                    # FFmpeg and ffprobe executables (Windows)
+│   ├── ffmpeg.exe
+│   └── ffprobe.exe
+│
+├── screenshots/               # Screenshots for documentation
+│
+├── requirements.txt           # Python dependencies
+├── LICENSE                    # Project license (GPL-3.0)
+└── README.md                  # Project documentation
+
 ```
 
 ---
