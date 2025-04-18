@@ -1,70 +1,40 @@
-# 🎥 VidLoader
+🎥 VidLoader
+VidLoader is a free, open-source tool to download videos and audio from major platforms like YouTube, Instagram, TikTok, and X (Twitter). It’s designed to be user-friendly, fast, and cross-platform with two powerful interfaces:
 
-**VidLoader** is a free, open-source tool to download videos and audio from major platforms like **YouTube**, **Instagram**, **TikTok**, and **X (Twitter)**. It’s designed to be user-friendly, fast, and cross-platform with two powerful interfaces:
+🌐 Web App: Flask-based web interface (with mobile and dark mode support).
+🖥️ Desktop App: PyQt5 GUI for Windows, macOS, and Linux.
 
-- 🌐 **Web App**: Flask-based web interface (with mobile and dark mode support).
-- 🖥️ **Desktop App**: PyQt5 GUI for Windows, macOS, and Linux.
 
----
+🚀 Features
 
-## 🚀 Features
+🔻 Download videos (MP4) and audio (MP3/WebM).
+🌓 Dark mode and 📱 mobile-responsive web UI.
+🖥️ Simple and sleek desktop GUI (offline use).
+⚡ Fast audio conversion using FFmpeg (-preset ultrafast).
+🔁 WebM fallback if FFmpeg is unavailable.
+🧠 Intelligent error handling for login issues, geo-restrictions, and timeouts.
+📁 Files saved automatically to the user’s Downloads folder:
+Windows: C:\Users\<User>\Downloads
+Android: /sdcard/Download
 
-- 🔻 Download **videos (MP4)** and **audio (MP3/WebM)**.
-- 🌓 **Dark mode** and 📱 **mobile-responsive web UI**.
-- 🖥️ Simple and sleek **desktop GUI** (offline use).
-- ⚡ Fast audio conversion using **FFmpeg (`-preset ultrafast`)**.
-- 🔁 WebM fallback if FFmpeg is unavailable.
-- 🧠 Intelligent error handling for login issues, geo-restrictions, and timeouts.
-- 📁 Files saved automatically to the user’s **Downloads** folder:
-  - Windows: `C:\Users\<User>\Downloads`
-  - Android: `/sdcard/Download`
-- 📝 Logs all activities to `vidloader.log` for easy debugging.
 
----
+📝 Logs all activities to vidloader.log for easy debugging.
 
-## 📁 Project Structure
 
-```
-VidLoader/
-├── web/
-│   ├── templates/
-│   │   └── index.html          # HTML template for the web interface
-│   └── web_app.py              # Flask backend for the web app
-│
-├── gui_app.py                  # PyQt5 desktop application
-│
-├── downloads/                 # Folder where downloaded files are saved
-│
-├── ffmpeg/                    # FFmpeg and ffprobe executables (Windows)
-│   ├── ffmpeg.exe
-│   └── ffprobe.exe
-│
-├── screenshots/               # Screenshots for documentation
-│
-├── requirements.txt           # Python dependencies
-├── LICENSE                    # Project license (GPL-3.0)
-└── README.md                  # Project documentation
+🔧 Installation
+✅ Prerequisites
 
-```
+Python 3.8+
+FFmpeg (for audio conversion):
+Windows: Download from gyan.dev or install via Chocolatey (choco install ffmpeg)
+Linux: sudo apt-get install ffmpeg
+macOS: brew install ffmpeg
 
----
 
-## 🔧 Installation
+Git
 
-### ✅ Prerequisites
 
-- Python 3.8+
-- FFmpeg (for audio conversion):
-  - **Windows**: [Download from gyan.dev](https://www.gyan.dev/ffmpeg/builds/)
-  - **Linux**: `sudo apt-get install ffmpeg`
-  - **macOS**: `brew install ffmpeg`
-- Git
-
----
-
-## 🌐 Web App Setup
-
-```bash
+🌐 Web App Setup
 # Clone the repo
 git clone https://github.com/colloceo/VidLoader.git
 cd VidLoader/web
@@ -75,32 +45,23 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-```
 
-**`requirements.txt`:**
-```
+requirements.txt:
 flask==3.0.3
 yt-dlp==2024.8.6
 gunicorn==22.0.0
 requests==2.31.0
-```
 
-**Install FFmpeg:**
-- Place `ffmpeg.exe` and `ffprobe.exe` in `VidLoader/ffmpeg/` (Windows only)
+Install FFmpeg:
 
-**Run Locally:**
-```bash
+Place ffmpeg.exe and ffprobe.exe in VidLoader/ffmpeg/ (Windows only)
+
+Run Locally:
 python web_app.py
-```
 
-**Open in browser:**
-[http://127.0.0.1:5000](http://127.0.0.1:5000)
+Open in browser:http://127.0.0.1:5000
 
----
-
-## 🖥️ Desktop App Setup
-
-```bash
+🖥️ Desktop App Setup
 cd VidLoader/desktop
 
 # Virtual environment
@@ -109,104 +70,127 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-```
 
-**`requirements.txt`:**
-```
+requirements.txt:
 PyQt5==5.15.9
 yt-dlp==2024.8.6
 requests==2.31.0
-```
 
-**Run the App:**
-```bash
+Run the App:
 python gui_app.py
-```
 
----
 
-## 📦 Build Windows Executable
+📦 Releases
+VidLoader v1.0.0 - Windows
 
-```bash
+Released: April 18, 2025
+Download: VidLoader-v1.0.0-Windows.zip
+Features:
+Windows executable (VidLoader.exe) with custom icon.
+Downloads videos (MP4) and audio (MP3/WebM) from YouTube, Instagram, TikTok, and X.
+Built with PyQt5, yt-dlp, and FFmpeg.
+
+
+Installation:
+Download and extract VidLoader-v1.0.0-Windows.zip.
+Double-click VidLoader.exe to run.
+Paste a public video/audio URL and select format.
+
+
+Notes:
+Requires Windows 7/8/10/11 (64-bit).
+Logs saved to vidloader.log in the same folder.
+Source code included for GPL compliance.
+
+
+
+
+📦 Build Windows Executable
 pip install pyinstaller==5.13.0
 cd desktop
 
 pyinstaller --add-binary "../ffmpeg/ffmpeg.exe;ffmpeg" \
             --add-binary "../ffmpeg/ffprobe.exe;ffmpeg" \
             --add-data "vidloader.log;." \
-            -F -n VidLoader gui_app.py
-```
+            --icon "vidloader.ico" \
+            -F -w -n VidLoader gui_app.py
 
-- Find `VidLoader.exe` in the `dist/` folder.
 
----
+Find VidLoader.exe in the dist/ folder.
 
-## ✅ Usage
 
-### 🌐 Web App
+✅ Usage
+🌐 Web App
 
-1. Visit `http://127.0.0.1:5000`
-2. Paste a public video/audio URL
-3. Select **Video** or **Audio**
-4. Click **Download Now**
-5. File will save in your Downloads folder
+Visit http://127.0.0.1:5000
+Paste a public video/audio URL
+Select Video or Audio
+Click Download Now
+File will save in your Downloads folder
 
-### 🖥️ Desktop App
+🖥️ Desktop App
 
-1. Run `gui_app.py` or `VidLoader.exe`
-2. Paste the URL
-3. Choose MP4 or MP3/WebM
-4. Click **Download**
-5. Watch the status and confirm file saved
+Run gui_app.py or VidLoader.exe
+Paste the URL
+Choose MP4 or MP3/WebM
+Click Download
+Watch the status and confirm file saved
 
----
 
-## ⚠️ Notes & Tips
+⚠️ Notes & Tips
 
-- Always use **public URLs** to avoid login errors
-- Use clean Instagram URLs (e.g., `https://www.instagram.com/reel/xyz/`)
-- If MP3 fails, WebM is used as a fallback (no FFmpeg needed)
-- Shorter videos = faster processing
+Always use public URLs to avoid login errors
+Use clean Instagram URLs (e.g., https://www.instagram.com/reel/xyz/)
+If MP3 fails, WebM is used as a fallback (no FFmpeg needed)
+Shorter videos = faster processing
 
----
 
-## 🚀 Deployment
+🚀 Deployment
+🌐 Web App Hosting
 
-### 🌐 Web App Hosting
+Platforms: PythonAnywhere, Heroku, Render
+Make sure FFmpeg is installed on your server
+Use a WSGI server like Gunicorn:gunicorn web_app:app
 
-- Platforms: PythonAnywhere, Heroku, Render
-- Make sure FFmpeg is installed on your server
-- Use a WSGI server like **Gunicorn**:
-  ```bash
-  gunicorn web_app:app
-  ```
 
-### 🖥️ Desktop App Distribution
 
-- Upload `.exe` to GitHub or your website
-- Bundle FFmpeg in the `dist/` folder
-- Ensure GPL license compliance
+🖥️ Desktop App Distribution
 
----
+Upload .exe to GitHub or your website
+Bundle FFmpeg in the dist/ folder
+Ensure GPL license compliance
 
-## 🛠️ Troubleshooting
 
-| Problem           | Fix |
-|-------------------|-----|
-| FFmpeg not working | Ensure ffmpeg/ffprobe are in place |
-| Login errors | Use public links only |
-| Timeouts | Shorten video length |
-| Logs not showing | Check `vidloader.log` in app folder |
+🛠️ Troubleshooting
 
----
 
-## 🤝 Contributing
 
+Problem
+Fix
+
+
+
+FFmpeg not working
+Ensure ffmpeg/ffprobe are in place
+
+
+Login errors
+Use public links only
+
+
+Timeouts
+Shorten video length
+
+
+Logs not showing
+Check vidloader.log in app folder
+
+
+
+🤝 Contributing
 We welcome all contributions!
-
-```bash
 # Fork and clone
-git clone https://github.com/colloceo/vidloader.git
+git clone https://github.com/yourusername/VidLoader.git
 
 # Create feature branch
 git checkout -b feature/YourFeature
@@ -216,40 +200,34 @@ git commit -m "Add YourFeature"
 
 # Push and open a PR
 git push origin feature/YourFeature
-```
 
----
 
-## 📝 License
+📝 License
+VidLoader is licensed under GNU GPL v3.0 due to dependencies:
 
-VidLoader is licensed under **GNU GPL v3.0** due to dependencies:
+FFmpeg: GPL
+PyQt5: GPL
+yt-dlp: Unlicense
+Flask: BSD
 
-- FFmpeg: GPL
-- PyQt5: GPL
-- yt-dlp: Unlicense
-- Flask: BSD
+📄 See LICENSE for full details. Distributors must include source code or acquire commercial licenses.
 
-📄 See `LICENSE` for full details. Distributors must include source code or acquire commercial licenses.
+☕ Support & Contact
 
----
+GitHub Issues: Bug reports & feature requests
+GitHub Discussions: Community & help
+Buy Me a Coffee: Donate to support development
 
-## ☕ Support & Contact
 
-- [GitHub Issues](https://github.com/colloceo/vidloader/issues): Bug reports & feature requests
-- [GitHub Discussions](https://github.com/colloceo/vilLoader/discussions): Community & help
-- [Buy Me a Coffee](https://www.buymeacoffee.com/colloceo): Donate to support development
+🙏 Acknowledgments
 
----
+🧠 yt_dlp – Download backend
+🎧 FFmpeg – Audio conversion
+🌐 Flask – Web interface
+🖥️ PyQt5 – Desktop GUI
 
-## 🙏 Acknowledgments
 
-- 🧠 `yt_dlp` – Download backend
-- 🎧 `FFmpeg` – Audio conversion
-- 🌐 `Flask` – Web interface
-- 🖥️ `PyQt5` – Desktop GUI
 
----
+VidLoader: Download videos and audio with ease. Built for content lovers, by content lovers. 🎬
 
-> **VidLoader**: *Download videos and audio with ease. Built for content lovers, by content lovers.* 🎬
 
----
